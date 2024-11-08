@@ -13,6 +13,5 @@ clean:
 	@rm -f md5 md5.o md5_kernel_ACCELERATOR_CellBE_processor.ocl
 
 CC      = gcc
-BITS    = -m32
-CFLAGS  = -I. -g -O3 ${BITS}
-LDFLAGS = -lOpenCL ${BITS} -lm -lstdc++
+CFLAGS  = -I. -g -Os
+LDFLAGS = -lOpenCL -lm -lstdc++

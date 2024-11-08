@@ -6,7 +6,9 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#define CL_TARGET_OPENCL_VERSION 300
 #include <CL/cl.h>
+
 
 /* typedef a 32 bit type */
 typedef unsigned long int UINT4;
@@ -76,7 +78,8 @@ int main(){
 
     cl_program clp;
     if(source){
-        clp = clCreateProgramWithSource(ctx, 1, &buffer, &result, &err);
+        const char *b = buffer;
+        clp = clCreateProgramWithSource(ctx, 1, &b, &result, &err);
         if (clp == NULL || err != CL_SUCCESS)
             fprintf(stderr, "Error creating program: %d\n", err);
 
@@ -88,13 +91,13 @@ int main(){
         cl_int clp_i_r = clGetProgramInfo(clp, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &clp_iptr_sizes, NULL);
         if(clp_i_r != CL_SUCCESS)
             fprintf(stderr, "Error program info sizes: %d\n", clp_i_r);
-        fprintf(stderr, "Size: %d\n", clp_iptr_sizes[0]);
+        fprintf(stderr, "Size: %d\n", (unsigned int)clp_iptr_sizes[0]);
         void * clp_iptr[1];
         clp_iptr[0] = (void *)malloc(sizeof(unsigned char)*clp_iptr_sizes[0]);
         clp_i_r = clGetProgramInfo(clp, CL_PROGRAM_BINARIES, sizeof(unsigned char)*clp_iptr_sizes[0], &clp_iptr, NULL);
         if(clp_i_r != CL_SUCCESS)
             fprintf(stderr, "Error program info sizes: %d\n", clp_i_r);
-        fprintf(stderr, "Writing size: %d\n", clp_iptr_sizes[0]);
+        fprintf(stderr, "Writing size: %d\n", (unsigned int)clp_iptr_sizes[0]);
         FILE *pFileC = fopen(fn, "wb");
         if (pFileC==NULL) {
             fprintf(stderr, "Error opening %s for writing: %s\n", fn, strerror(errno)); 
@@ -105,9 +108,9 @@ int main(){
         free(clp_iptr[0]);
 
     } else {
-        void * clb[1];
-        clb[0] = buffer;
-        clp = clCreateProgramWithBinary(ctx, 1, &device, &result, &clb, NULL, &err);
+        void * clb;
+        clb = buffer;
+        clp = clCreateProgramWithBinary(ctx, 1, &device, &result, clb, NULL, &err);
         if (clp == NULL || err != CL_SUCCESS)
             fprintf(stderr, "Error creating binary program: %d\n", err);
 
@@ -159,13 +162,13 @@ int main(){
     if( oka != CL_SUCCESS )
         fprintf(stderr, "Error setting kernel ARGS: %d\n", oka);
 
-    cl_command_queue clc = clCreateCommandQueue(ctx, device, NULL, &err);
+    cl_command_queue clc = clCreateCommandQueue(ctx, device, 0, &err);
     if( clc == NULL )
         fprintf(stderr, "Error creating command queue: %d\n", err);
 
     fprintf(stderr, "Enqueuing kernel\n");
 	size_t global_dimensions[] = {6,1};
-    cl_int ok = clEnqueueNDRangeKernel(clc, clk, 2, NULL, &global_dimensions, NULL, 0, NULL, NULL);
+    cl_int ok = clEnqueueNDRangeKernel(clc, clk, 2, NULL, (const size_t *)&global_dimensions, NULL, 0, NULL, NULL);
     if( ok != CL_SUCCESS )
         fprintf(stderr, "Error enqueuing kernel: %d\n", ok);
 
