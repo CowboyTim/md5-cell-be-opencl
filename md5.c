@@ -137,10 +137,10 @@ int main(){
     UINT4 digest_wanted_hex4;
 
     sscanf ((const char *)digest_wanted, "%08x%08x%08x%08x",
-          &digest_wanted_hex1,
-          &digest_wanted_hex2, 
-          &digest_wanted_hex3, 
-          &digest_wanted_hex4);
+          (unsigned int *)&digest_wanted_hex1,
+          (unsigned int *)&digest_wanted_hex2,
+          (unsigned int *)&digest_wanted_hex3,
+          (unsigned int *)&digest_wanted_hex4);
     endian_swap(&digest_wanted_hex1);
     endian_swap(&digest_wanted_hex2);
     endian_swap(&digest_wanted_hex3);
