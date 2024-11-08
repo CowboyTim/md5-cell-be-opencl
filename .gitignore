@@ -2,3 +2,4 @@
 .*~
 .o
 .ocl
+cl_compile_kernel
