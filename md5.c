@@ -13,11 +13,6 @@
 /* typedef a 32 bit type */
 typedef unsigned long int UINT4;
 
-UINT4 h0;
-UINT4 h1;
-UINT4 h2;
-UINT4 h3;
-
 inline void endian_swap (UINT4 *x) {
     *x =   (*x >> 24)               |
           ((*x << 8 ) & 0x00FF0000) | 
@@ -25,18 +20,20 @@ inline void endian_swap (UINT4 *x) {
            (*x << 24);
 }
 
-void MD5Print(unsigned char *inString){
+void MD5Print(unsigned char *inString, UINT4 h0, UINT4 h1, UINT4 h2, UINT4 h3){
     UINT4 hh0 = h0, hh1 = h1, hh2 = h2, hh3 = h3;
+    /*
     endian_swap(&hh0);
     endian_swap(&hh1);
     endian_swap(&hh2);
     endian_swap(&hh3);
+    */
     fprintf(stderr, "%08x%08x%08x%08x", (unsigned int)hh0, (unsigned int)hh1, (unsigned int)hh2, (unsigned int)hh3);
     fprintf(stderr, " \"%s\"\n\n", inString);
 }
 
 typedef struct {
-    unsigned char wanted[4];
+    unsigned int  wanted[4];
     unsigned char inString[17];
     unsigned int  len;
     unsigned int  nriter;
@@ -47,6 +44,7 @@ int main(int argc, char *argv[]){
     cl_int CL_err = CL_SUCCESS;
     cl_uint        nr_platforms = 0;
     cl_device_id   device;
+    cl_event       event;
     CL_err = clGetPlatformIDs(1, &platform, &nr_platforms);
     if (CL_err != CL_SUCCESS) {
         fprintf(stderr, "Error getting platform: %d\n", CL_err);
@@ -150,33 +148,29 @@ int main(int argc, char *argv[]){
     }
 
 
-    blah * arg;
+    blah *arg = NULL;
     arg = (blah *)malloc(sizeof(blah));
-    strcpy((char *)&arg->inString, "xxxxxxxxxxxxxxxa\0");
+
+    /* this is 'xxxxxxxxxxxxxxxx' */
+    char start_string[]  = "xxxxxxxxxxxxxxxx\0";
+    char digest_wanted[] = "45ed9cc2f92b77cd8b2f5bd59ff635f8\0";
+
+    memcpy(arg->inString, start_string, sizeof(arg->inString));
     arg->len = strlen((char *)arg->inString);
     arg->nriter = 5;
 
-    /* this is 'xxxxxxxxxxxxxxxx' */
-    char digest_wanted[] = "45ed9cc2f92b77cd8b2f5bd59ff635f8";
-    UINT4 digest_wanted_hex1;
-    UINT4 digest_wanted_hex2;
-    UINT4 digest_wanted_hex3;
-    UINT4 digest_wanted_hex4;
-
-    sscanf ((const char *)digest_wanted, "%08x%08x%08x%08x",
-          (unsigned int *)&digest_wanted_hex1,
-          (unsigned int *)&digest_wanted_hex2,
-          (unsigned int *)&digest_wanted_hex3,
-          (unsigned int *)&digest_wanted_hex4);
-    endian_swap(&digest_wanted_hex1);
-    endian_swap(&digest_wanted_hex2);
-    endian_swap(&digest_wanted_hex3);
-    endian_swap(&digest_wanted_hex4);
-
-    arg->wanted[0] = digest_wanted_hex1;
-    arg->wanted[1] = digest_wanted_hex2;
-    arg->wanted[2] = digest_wanted_hex3;
-    arg->wanted[3] = digest_wanted_hex4;
+    sscanf(digest_wanted, "%08x%08x%08x%08x",
+          (unsigned int *)&arg->wanted[0],
+          (unsigned int *)&arg->wanted[1],
+          (unsigned int *)&arg->wanted[2],
+          (unsigned int *)&arg->wanted[3]);
+    fprintf(stderr, "START: %s\n",   arg[0].inString);
+    fprintf(stderr, "START: %d\n",   arg[0].len);
+    fprintf(stderr, "START: %d\n",   arg[0].nriter);
+    fprintf(stderr, "START: %08x\n", arg[0].wanted[0]);
+    fprintf(stderr, "START: %08x\n", arg[0].wanted[1]);
+    fprintf(stderr, "START: %08x\n", arg[0].wanted[2]);
+    fprintf(stderr, "START: %08x\n", arg[0].wanted[3]);
 
     cl_mem clb = clCreateBuffer(ctx, CL_MEM_READ_WRITE|CL_MEM_USE_HOST_PTR, sizeof(blah), arg, &CL_err);
     if( clb == NULL ){
@@ -203,16 +197,23 @@ int main(int argc, char *argv[]){
         fprintf(stderr, "Error enqueuing kernel: %d\n", ok);
         return EXIT_FAILURE;
     }
+    fprintf(stderr, "Waiting for kernel finish\n");
+    clFinish(clc);
 
-    fprintf(stderr, "Waiting for readBuffer: TODO\n");
-    /*
-    cl_int ok2 = clEnqueueReadBuffer(clc, clb, CL_TRUE, 0, 13, rbuf, 0, NULL, NULL);
+    fprintf(stderr, "Waiting for readBuffer\n");
+    blah ret[1];
+    cl_int ok2 = clEnqueueReadBuffer(clc, clb, CL_TRUE, 0, sizeof(blah), (unsigned char *)&ret, 0, &event, NULL);
     if( ok2 != CL_SUCCESS ){
         fprintf(stderr, "Error enqueuing readbuffer: %d\n", ok2);
         return EXIT_FAILURE;
     }
-    fprintf(stderr, "DONE: %s\n", rbuf);
-    */
+    fprintf(stderr, "DONE: %s\n",   ret[0].inString);
+    fprintf(stderr, "DONE: %d\n",   ret[0].len);
+    fprintf(stderr, "DONE: %d\n",   ret[0].nriter);
+    fprintf(stderr, "DONE: %08x\n", ret[0].wanted[0]);
+    fprintf(stderr, "DONE: %08x\n", ret[0].wanted[1]);
+    fprintf(stderr, "DONE: %08x\n", ret[0].wanted[2]);
+    fprintf(stderr, "DONE: %08x\n", ret[0].wanted[3]);
 
     clReleaseMemObject(clb);
     clReleaseKernel(clk);

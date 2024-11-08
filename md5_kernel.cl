@@ -188,7 +188,7 @@ void MD5Calc(unsigned char *inBuf, UINT4 inLen, UINT4 *h0, UINT4 *h1, UINT4 *h2,
 
 __kernel void MD5Check(__global blah *a)
 {
-    UINT4 i;
+    UINT4 i = 0;
     UINT4 h0;
     UINT4 h1;
     UINT4 h2;
@@ -200,7 +200,16 @@ __kernel void MD5Check(__global blah *a)
             h1 == a->wanted[1] &&
             h2 == a->wanted[2] && 
             h3 == a->wanted[3]) {
-            break;
+            a->wanted[0] = h0;
+            a->wanted[1] = h1;
+            a->wanted[2] = h2;
+            a->wanted[3] = h3;
+            return;
         }
     } 
+    a->wanted[0] = 0;
+    a->wanted[1] = 0;
+    a->wanted[2] = 0;
+    a->wanted[3] = 0;
+    return;
 }
