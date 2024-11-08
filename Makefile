@@ -1,6 +1,6 @@
 all:  runner
 
-runner: cl_compile_kernel runner.o md5.ocl
+runner: cl_compile_kernel runner.o md5_kernel.ocl
 	$(CC) $(LDFLAGS) runner.o -o runner -lOpenCL
 
 %.ocl: %.cl
