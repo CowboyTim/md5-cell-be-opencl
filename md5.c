@@ -182,16 +182,22 @@ int main(int argc, char *argv[]){
     arg->wanted[3] = digest_wanted_hex4;
 
     cl_mem clb = clCreateBuffer(ctx, CL_MEM_READ_WRITE|CL_MEM_USE_HOST_PTR, sizeof(blah), arg, &CL_err);
-    if( clb == NULL )
+    if( clb == NULL ){
         fprintf(stderr, "Error creating buffer: %d\n", CL_err);
+        return EXIT_FAILURE;
+    }
 
     cl_int oka = clSetKernelArg(clk, 0, sizeof(cl_mem), &clb);
-    if( oka != CL_SUCCESS )
+    if( oka != CL_SUCCESS ){
         fprintf(stderr, "Error setting kernel ARGS: %d\n", oka);
+        return EXIT_FAILURE;
+    }
 
     cl_command_queue clc = clCreateCommandQueue(ctx, device, 0, &CL_err);
-    if( clc == NULL )
+    if( clc == NULL ){
         fprintf(stderr, "Error creating command queue: %d\n", CL_err);
+        return EXIT_FAILURE;
+    }
 
     fprintf(stderr, "Enqueuing kernel\n");
 	size_t global_dimensions[] = {6,1};
