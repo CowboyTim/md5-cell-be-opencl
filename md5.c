@@ -128,7 +128,7 @@ int main(){
 
     blah * arg;
     arg = (blah *)malloc(sizeof(blah));
-    strcpy(&arg->inString, "xxxxxxxxxxxxxxxa\0");
+    strcpy((char *)&arg->inString, "xxxxxxxxxxxxxxxa\0");
     arg->len = strlen(arg->inString);
     arg->nriter = 5;
 
