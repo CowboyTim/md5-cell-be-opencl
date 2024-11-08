@@ -43,23 +43,37 @@ typedef struct {
 } blah;
 
 
-int main(){
+int main(int argc, char *argv[]){
 
-    cl_uint        nr_devices;
+    cl_platform_id platform;
+    cl_int CL_err = CL_SUCCESS;
+    cl_uint        nr_platforms = 0;
     cl_device_id   device;
-    clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ACCELERATOR, 1, &device, &nr_devices);
+    CL_err = clGetPlatformIDs(1, &platform, &nr_platforms);
+    if (CL_err != CL_SUCCESS) {
+        fprintf(stderr, "Error getting platform: %d\n", CL_err);
+        return EXIT_FAILURE;
+    }
+    CL_err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
+    if (CL_err != CL_SUCCESS) {
+        fprintf(stderr, "Error getting device: %d\n", CL_err);
+        return EXIT_FAILURE;
+    }
+    cl_context ctx = clCreateContext(NULL, 1, &device, NULL, NULL, &CL_err);
+    if (ctx == NULL){
+        fprintf(stderr, "Error creating context: %d\n", CL_err);
+        return EXIT_FAILURE;
+    }
 
-    cl_int err = 0;
-    cl_context ctx = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
-    if (ctx == NULL)
-        fprintf(stderr, "Error creating context: %d\n", err);
-
-
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <cl kernel .ocl> [<source>]\n", argv[0]);
+        return EXIT_FAILURE;
+    }
     int source = 0;
-    char fn[] = "md5_kernel_ACCELERATOR_CellBE_processor.ocl";
-    char fn_src[] = "md5_kernel.cl";
-    char * buffer;
-    FILE *pFile;
+    char *fn = argv[1];
+    char *fn_src = argv[2];
+    char *buffer = NULL;
+    FILE *pFile  = NULL;
     pFile = fopen(fn, "rb");
     if (pFile==NULL) {
         source = 1;
@@ -72,20 +86,25 @@ int main(){
     fseek(pFile , 0 , SEEK_END);
     long lSize = ftell(pFile);
     rewind(pFile);
-    buffer = (unsigned char*)malloc(sizeof(unsigned char)*lSize);
+    buffer = (char*)malloc(sizeof(unsigned char)*lSize);
     size_t result = fread(buffer,1,lSize,pFile);
     fclose(pFile);
 
     cl_program clp;
     if(source){
+        fprintf(stderr, "Using source\n");
         const char *b = buffer;
-        clp = clCreateProgramWithSource(ctx, 1, &b, &result, &err);
-        if (clp == NULL || err != CL_SUCCESS)
-            fprintf(stderr, "Error creating program: %d\n", err);
+        clp = clCreateProgramWithSource(ctx, 1, &b, &result, &CL_err);
+        if (clp == NULL || CL_err != CL_SUCCESS){
+            fprintf(stderr, "Error creating program: %d\n", CL_err);
+            return EXIT_FAILURE;
+        }
 
         cl_int r = clBuildProgram(clp, 1, &device, NULL, NULL, NULL);
-        if( r != CL_SUCCESS )
+        if( r != CL_SUCCESS ){
             fprintf(stderr, "Error building program: %d\n", r);
+            return EXIT_FAILURE;
+        }
 
         size_t clp_iptr_sizes[1];
         cl_int clp_i_r = clGetProgramInfo(clp, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &clp_iptr_sizes, NULL);
@@ -108,28 +127,36 @@ int main(){
         free(clp_iptr[0]);
 
     } else {
-        void * clb;
-        clb = buffer;
-        clp = clCreateProgramWithBinary(ctx, 1, &device, &result, clb, NULL, &err);
-        if (clp == NULL || err != CL_SUCCESS)
-            fprintf(stderr, "Error creating binary program: %d\n", err);
+        fprintf(stderr, "Using binary program\n");
+        clp = clCreateProgramWithBinary(ctx, 1, &device, &result, (const unsigned char **)&buffer, NULL, &CL_err);
+        if (clp == NULL || CL_err != CL_SUCCESS){
+            if (CL_err == CL_INVALID_BINARY) {
+                fprintf(stderr, "Invalid binary\n");
+                return EXIT_FAILURE;
+            }
+            fprintf(stderr, "Error creating binary program: %d\n", CL_err);
+            return EXIT_FAILURE;
+        }
 
         cl_int r = clBuildProgram(clp, 1, &device, NULL, NULL, NULL);
-        if( r != CL_SUCCESS )
+        if( r != CL_SUCCESS ){
             fprintf(stderr, "Error building program: %d\n", r);
-
+            return EXIT_FAILURE;
+        }
     }
     free(buffer);
 
-    cl_kernel clk = clCreateKernel(clp, "MD5Check", &err);
-    if( clk == NULL )
-        fprintf(stderr, "Error creating kernel: %d\n", err);
+    cl_kernel clk = clCreateKernel(clp, "MD5Check", &CL_err);
+    if( clk == NULL ){
+        fprintf(stderr, "Error creating kernel: %d\n", CL_err);
+        return EXIT_FAILURE;
+    }
 
 
     blah * arg;
     arg = (blah *)malloc(sizeof(blah));
     strcpy((char *)&arg->inString, "xxxxxxxxxxxxxxxa\0");
-    arg->len = strlen(arg->inString);
+    arg->len = strlen((char *)arg->inString);
     arg->nriter = 5;
 
     /* this is 'xxxxxxxxxxxxxxxx' */
@@ -154,30 +181,33 @@ int main(){
     arg->wanted[2] = digest_wanted_hex3;
     arg->wanted[3] = digest_wanted_hex4;
 
-    cl_mem clb = clCreateBuffer(ctx, CL_MEM_READ_WRITE|CL_MEM_USE_HOST_PTR, sizeof(blah), arg, &err);
+    cl_mem clb = clCreateBuffer(ctx, CL_MEM_READ_WRITE|CL_MEM_USE_HOST_PTR, sizeof(blah), arg, &CL_err);
     if( clb == NULL )
-        fprintf(stderr, "Error creating buffer: %d\n", err);
+        fprintf(stderr, "Error creating buffer: %d\n", CL_err);
 
     cl_int oka = clSetKernelArg(clk, 0, sizeof(cl_mem), &clb);
     if( oka != CL_SUCCESS )
         fprintf(stderr, "Error setting kernel ARGS: %d\n", oka);
 
-    cl_command_queue clc = clCreateCommandQueue(ctx, device, 0, &err);
+    cl_command_queue clc = clCreateCommandQueue(ctx, device, 0, &CL_err);
     if( clc == NULL )
-        fprintf(stderr, "Error creating command queue: %d\n", err);
+        fprintf(stderr, "Error creating command queue: %d\n", CL_err);
 
     fprintf(stderr, "Enqueuing kernel\n");
 	size_t global_dimensions[] = {6,1};
     cl_int ok = clEnqueueNDRangeKernel(clc, clk, 2, NULL, (const size_t *)&global_dimensions, NULL, 0, NULL, NULL);
-    if( ok != CL_SUCCESS )
+    if( ok != CL_SUCCESS ){
         fprintf(stderr, "Error enqueuing kernel: %d\n", ok);
+        return EXIT_FAILURE;
+    }
 
+    fprintf(stderr, "Waiting for readBuffer: TODO\n");
     /*
-    fprintf(stderr, "Waiting for readBuffer\n");
     cl_int ok2 = clEnqueueReadBuffer(clc, clb, CL_TRUE, 0, 13, rbuf, 0, NULL, NULL);
-    if( ok2 != CL_SUCCESS )
+    if( ok2 != CL_SUCCESS ){
         fprintf(stderr, "Error enqueuing readbuffer: %d\n", ok2);
-
+        return EXIT_FAILURE;
+    }
     fprintf(stderr, "DONE: %s\n", rbuf);
     */
 

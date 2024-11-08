@@ -1,6 +1,3 @@
-#include <string.h>
-#include <stdio.h>
-
 
 __kernel void
 sommeer(__global       float * v1,
@@ -28,11 +25,6 @@ typedef struct {
 
 
 typedef unsigned long int UINT4;
-
-UINT4 h0;
-UINT4 h1;
-UINT4 h2;
-UINT4 h3;
 
 /* F, G and H are basic MD5 functions: selection, majority, parity */
 #define F(x, y, z) (((x) & (y)) | ((~x) & (z)))
@@ -70,9 +62,9 @@ UINT4 h3;
 
 /* Basic MD5 step. Transform buf based on in.
  */
-void Transform (UINT4 * in)
+void Transform (UINT4 * in, UINT4 *h0, UINT4 *h1, UINT4 *h2, UINT4 *h3)
 {
-  UINT4 a = h0, b = h1, c = h2, d = h3;
+  UINT4 a = *h0, b = *h1, c = *h2, d = *h3;
 
   /* Round 1 */
 #define S11 7
@@ -162,21 +154,21 @@ void Transform (UINT4 * in)
   II (c, d, a, b, in[2], S43, 718787259);	/* 63 */
   II (b, c, d, a, in[9], S44, 3951481745);	/* 64 */
 
-  h0 += a;
-  h1 += b;
-  h2 += c;
-  h3 += d;
+  *h0 += a;
+  *h1 += b;
+  *h2 += c;
+  *h3 += d;
 }
 
-void MD5Calc(unsigned char *inBuf, UINT4 inLen)
+void MD5Calc(unsigned char *inBuf, UINT4 inLen, UINT4 *h0, UINT4 *h1, UINT4 *h2, UINT4 *h3)
 {
 
   /* Load magic initialization constants.
    */
-  h0 = (UINT4) 0x67452301;
-  h1 = (UINT4) 0xefcdab89;
-  h2 = (UINT4) 0x98badcfe;
-  h3 = (UINT4) 0x10325476;
+  *h0 = (UINT4) 0x67452301;
+  *h1 = (UINT4) 0xefcdab89;
+  *h2 = (UINT4) 0x98badcfe;
+  *h3 = (UINT4) 0x10325476;
 
   UINT4 in[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,(inLen << 3),0};
 
@@ -184,28 +176,26 @@ void MD5Calc(unsigned char *inBuf, UINT4 inLen)
 
   /* append length scratch_in bits and transform */
   for (i = 0, ii = 0; i < 4; i++, ii += 4)
-	in[i] = ((UINT4) inBuf[ii + 3] << 24) |
-	        ((UINT4) inBuf[ii + 2] << 16) |
-	        ((UINT4) inBuf[ii + 1] << 8 ) | 
+    in[i] = ((UINT4) inBuf[ii + 3] << 24) |
+            ((UINT4) inBuf[ii + 2] << 16) |
+            ((UINT4) inBuf[ii + 1] << 8 ) | 
              (UINT4) inBuf[ii];
   in[4] = 0x80;
 
-  Transform(in);
+  Transform(in, h0, h1, h2, h3);
 }
 
 
-__kernel void MD5Check(__global blah *rbuf)
+__kernel void MD5Check(__global blah *a)
 {
-    blah *a;
-    a=malloc(sizeof(blah));
-    memcpy((void *)a, (void *)rbuf, sizeof(blah));
-
-    fprintf(stderr, "g:%u: %u, %u, %s\n", get_global_id(0), a->nriter, a->len, a->inString);
-
-    
     UINT4 i;
+    UINT4 h0;
+    UINT4 h1;
+    UINT4 h2;
+    UINT4 h3;
+
     for(i = 0; i < a->nriter; i++){
-        MD5Calc(a->inString, a->len);
+        MD5Calc(a->inString, a->len, &h0, &h1, &h2, &h3);
         if (h0 == a->wanted[0] &&
             h1 == a->wanted[1] &&
             h2 == a->wanted[2] && 
