@@ -20,7 +20,7 @@ UINT4 h3;
 
 inline void endian_swap (UINT4 *x) {
     *x =   (*x >> 24)               |
-	      ((*x << 8 ) & 0x00FF0000) | 
+          ((*x << 8 ) & 0x00FF0000) | 
           ((*x >> 8 ) & 0x0000FF00) | 
            (*x << 24);
 }
@@ -42,9 +42,7 @@ typedef struct {
     unsigned int  nriter;
 } blah;
 
-
 int main(int argc, char *argv[]){
-
     cl_platform_id platform;
     cl_int CL_err = CL_SUCCESS;
     cl_uint        nr_platforms = 0;
@@ -64,7 +62,6 @@ int main(int argc, char *argv[]){
         fprintf(stderr, "Error creating context: %d\n", CL_err);
         return EXIT_FAILURE;
     }
-
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <cl kernel .ocl> [<source>]\n", argv[0]);
         return EXIT_FAILURE;
@@ -200,7 +197,7 @@ int main(int argc, char *argv[]){
     }
 
     fprintf(stderr, "Enqueuing kernel\n");
-	size_t global_dimensions[] = {6,1};
+    size_t global_dimensions[] = {6,1};
     cl_int ok = clEnqueueNDRangeKernel(clc, clk, 2, NULL, (const size_t *)&global_dimensions, NULL, 0, NULL, NULL);
     if( ok != CL_SUCCESS ){
         fprintf(stderr, "Error enqueuing kernel: %d\n", ok);
@@ -217,7 +214,11 @@ int main(int argc, char *argv[]){
     fprintf(stderr, "DONE: %s\n", rbuf);
     */
 
+    clReleaseMemObject(clb);
+    clReleaseKernel(clk);
+    clReleaseProgram(clp);
+    clReleaseCommandQueue(clc);
+    clReleaseContext(ctx);
     free(arg);
-
     return 0;
 }
