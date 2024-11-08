@@ -57,15 +57,35 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Error getting platform: %d\n", CL_err);
         return EXIT_FAILURE;
     }
-    clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
+    CL_err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
+    if (CL_err != CL_SUCCESS) {
+        fprintf(stderr, "Error getting device: %d\n", CL_err);
+        return EXIT_FAILURE;
+    }
     context = clCreateContext(NULL, 1, &device, NULL, NULL, NULL);
     program = clCreateProgramWithSource(context, 1, (const char **)&source, (const size_t *)&lengths, &errorcode_ret);
     if (errorcode_ret != CL_SUCCESS) {
         fprintf(stderr, "Error creating program: %d\n", errorcode_ret);
         return EXIT_FAILURE;
     }
-    clBuildProgram(program, 1, &device, "", NULL, NULL);
-    clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &binary_size, NULL);
+    CL_err = clBuildProgram(program, 1, &device, "", NULL, NULL);
+    if (CL_err != CL_SUCCESS) {
+        if (CL_err == CL_BUILD_PROGRAM_FAILURE) {
+            size_t length;
+            clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &length);
+            char *log = malloc(length);
+            clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, length, log, NULL);
+            fprintf(stderr, "%s\n", log);
+            free(log);
+        }
+        fprintf(stderr, "Error building program: %d\n", CL_err);
+        return EXIT_FAILURE;
+    }
+    CL_err = clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &binary_size, NULL);
+    if (CL_err != CL_SUCCESS) {
+        fprintf(stderr, "Error getting program info: %d\n", CL_err);
+        return EXIT_FAILURE;
+    }
     binary = malloc(binary_size);
     clGetProgramInfo(program, CL_PROGRAM_BINARIES, binary_size, &binary, NULL);
     f = fopen(output_path, "w");
