@@ -29,7 +29,7 @@ void MD5Print(unsigned char *inString){
     endian_swap(&hh1);
     endian_swap(&hh2);
     endian_swap(&hh3);
-    fprintf(stderr, "%08x%08x%08x%08x", hh0, hh1, hh2, hh3);
+    fprintf(stderr, "%08x%08x%08x%08x", (unsigned int)hh0, (unsigned int)hh1, (unsigned int)hh2, (unsigned int)hh3);
     fprintf(stderr, " \"%s\"\n\n", inString);
 }
 
