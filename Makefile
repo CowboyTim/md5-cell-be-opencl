@@ -14,5 +14,5 @@ clean:
 
 CC      = gcc
 BITS    = -m32
-CFLAGS	= -I. -g -O3 ${BITS}
-LDFLAGS	= -lOpenCL ${BITS} -lm -lstdc++
+CFLAGS  = -I. -g -O3 ${BITS}
+LDFLAGS = -lOpenCL ${BITS} -lm -lstdc++
