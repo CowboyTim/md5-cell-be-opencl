@@ -9,9 +9,8 @@
 #define CL_TARGET_OPENCL_VERSION 300
 #include <CL/cl.h>
 
+#include "md5.h"
 
-/* typedef a 32 bit type */
-typedef unsigned long int UINT4;
 
 inline void endian_swap (UINT4 *x) {
     *x =   (*x >> 24)               |
@@ -31,13 +30,6 @@ void MD5Print(unsigned char *inString, UINT4 h0, UINT4 h1, UINT4 h2, UINT4 h3){
     fprintf(stderr, "%08x%08x%08x%08x", (unsigned int)hh0, (unsigned int)hh1, (unsigned int)hh2, (unsigned int)hh3);
     fprintf(stderr, " \"%s\"\n\n", inString);
 }
-
-typedef struct {
-    unsigned int  wanted[4];
-    unsigned char inString[17];
-    unsigned int  len;
-    unsigned int  nriter;
-} blah;
 
 int main(int argc, char *argv[]){
     cl_platform_id platform;
@@ -152,8 +144,8 @@ int main(int argc, char *argv[]){
     arg = (blah *)malloc(sizeof(blah));
 
     /* this is 'xxxxxxxxxxxxxxxx' */
-    char start_string[]  = "xxxxxxxxxxxxxxxx\0";
-    char digest_wanted[] = "45ed9cc2f92b77cd8b2f5bd59ff635f8\0";
+    char start_string[]  = "xxxxxxxxxxxxxxxx";
+    char digest_wanted[] = "45ed9cc2f92b77cd8b2f5bd59ff635f8";
 
     memcpy(arg->inString, start_string, sizeof(arg->inString));
     arg->len = strlen((char *)arg->inString);

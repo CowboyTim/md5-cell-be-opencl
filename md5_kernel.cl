@@ -1,3 +1,4 @@
+#include "md5.h"
 
 __kernel void
 sommeer(__global       float * v1,
@@ -15,16 +16,6 @@ __kernel void hello(__global char * out)
     size_t tid = get_global_id(0);
     out[tid] = hw[tid];
 }
-
-typedef struct {
-    unsigned int  * wanted;
-    unsigned char * inString;
-    unsigned int    len;
-    unsigned int    nriter;
-} blah;
-
-
-typedef unsigned long int UINT4;
 
 /* F, G and H are basic MD5 functions: selection, majority, parity */
 #define F(x, y, z) (((x) & (y)) | ((~x) & (z)))
@@ -160,42 +151,29 @@ void Transform (UINT4 * in, UINT4 *h0, UINT4 *h1, UINT4 *h2, UINT4 *h3)
   *h3 += d;
 }
 
-void MD5Calc(unsigned char *inBuf, UINT4 inLen, UINT4 *h0, UINT4 *h1, UINT4 *h2, UINT4 *h3)
-{
-
-  /* Load magic initialization constants.
-   */
-  *h0 = (UINT4) 0x67452301;
-  *h1 = (UINT4) 0xefcdab89;
-  *h2 = (UINT4) 0x98badcfe;
-  *h3 = (UINT4) 0x10325476;
-
-  UINT4 in[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,(inLen << 3),0};
-
-  unsigned int i, ii;
-
-  /* append length scratch_in bits and transform */
-  for (i = 0, ii = 0; i < 4; i++, ii += 4)
-    in[i] = ((UINT4) inBuf[ii + 3] << 24) |
-            ((UINT4) inBuf[ii + 2] << 16) |
-            ((UINT4) inBuf[ii + 1] << 8 ) | 
-             (UINT4) inBuf[ii];
-  in[4] = 0x80;
-
-  Transform(in, h0, h1, h2, h3);
-}
-
-
 __kernel void MD5Check(__global blah *a)
 {
     UINT4 i = 0;
-    UINT4 h0;
-    UINT4 h1;
-    UINT4 h2;
-    UINT4 h3;
+    UINT4 h0 = (UINT4) 0x67452301;
+    UINT4 h1 = (UINT4) 0xefcdab89;
+    UINT4 h2 = (UINT4) 0x98badcfe;
+    UINT4 h3 = (UINT4) 0x10325476;
 
     for(i = 0; i < a->nriter; i++){
-        MD5Calc(a->inString, a->len, &h0, &h1, &h2, &h3);
+        //MD5Calc((unsigned char *)&a->inString, a->len, &h0, &h1, &h2, &h3);
+        UINT4 in[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,(a->len << 3),0};
+
+        unsigned int i, ii;
+
+        /* append length scratch_in bits and transform */
+        for (i = 0, ii = 0; i < 4; i++, ii += 4)
+          in[i] = ((UINT4) a->inString[ii + 3] << 24) |
+                  ((UINT4) a->inString[ii + 2] << 16) |
+                  ((UINT4) a->inString[ii + 1] << 8 ) |
+                   (UINT4) a->inString[ii];
+        in[4] = 0x80;
+
+        Transform(in, h0, h1, h2, h3);
         if (h0 == a->wanted[0] &&
             h1 == a->wanted[1] &&
             h2 == a->wanted[2] && 
