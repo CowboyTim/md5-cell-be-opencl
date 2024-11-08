@@ -17,7 +17,7 @@ __kernel void hello(__global char * out)
 }
 
 typedef struct {
-    unsigned char * wanted;
+    unsigned int  * wanted;
     unsigned char * inString;
     unsigned int    len;
     unsigned int    nriter;
